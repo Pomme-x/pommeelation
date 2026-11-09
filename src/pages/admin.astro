@@ -94,6 +94,7 @@ export const prerender = true;
 			<h1>欢愉剧场 · 管理后台</h1>
 			<div class="actions">
 				<span class="mono" id="who">校验身份中…</span>
+				<button class="btn" id="changePwd">改密码</button>
 				<a class="btn" href="/" target="_blank">看站点</a>
 				<button class="btn warn" id="logout">退出</button>
 			</div>
@@ -447,6 +448,20 @@ export const prerender = true;
 				const d = await r.json();
 				$("settingsMsg").textContent = d.ok ? "已保存" : d.error || "保存失败";
 				setTimeout(() => ($("settingsMsg").textContent = ""), 2500);
+			});
+
+			$("changePwd").addEventListener("click", async () => {
+				const oldPwd = prompt("先输入当前密码：");
+				if (!oldPwd) return;
+				const nextPwd = prompt("设置新密码（管理员：至少 12 位，含大小写+数字+符号）：");
+				if (!nextPwd) return;
+				const r = await fetch("/api/auth/change-password", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ old: oldPwd, next: nextPwd }),
+				});
+				const d = await r.json();
+				alert(d.ok ? "密码已修改，其他设备上的登录已被踢下线" : d.error || "修改失败");
 			});
 
 			$("logout").addEventListener("click", async () => {
