@@ -102,7 +102,7 @@ export const prerender = true;
 						<thead>
 							<tr>
 								<th>ID</th><th>昵称</th><th>身份</th><th>状态</th>
-								<th>注册时间</th><th>最后登录</th><th>最近 IP</th>
+								<th>注册时间</th><th>最后登录</th><th>最近登录记录（时间 / IP）</th>
 								<th>设备</th><th>登录次数</th><th>操作</th>
 							</tr>
 						</thead>
@@ -118,6 +118,7 @@ export const prerender = true;
 
 			let me = null;
 			let allUsers = [];
+			let allLogs = [];
 
 			async function boot() {
 				const r = await fetch("/api/auth/me");
@@ -143,6 +144,7 @@ export const prerender = true;
 				if (!r.ok) { $("users").innerHTML = ""; $("empty").style.display = "block"; return; }
 				const d = await r.json();
 				allUsers = d.users || [];
+				allLogs = d.logs || [];
 				$("userCount").textContent = `（${allUsers.length} 人）`;
 				$("empty").style.display = allUsers.length ? "none" : "block";
 				$("users").innerHTML = allUsers
@@ -152,6 +154,9 @@ export const prerender = true;
 						if (!self) {
 							ops.push(`<button class="btn" data-act="role" data-id="${u.id}" data-v="${u.role === "admin" ? "user" : "admin"}">${u.role === "admin" ? "降为用户" : "设为管理员"}</button>`);
 							ops.push(`<button class="btn warn" data-act="status" data-id="${u.id}" data-v="${u.status === "active" ? "ban" : "unban"}">${u.status === "active" ? "封禁" : "解封"}</button>`);
+							if (u.locked_until && u.locked_until > Date.now()) {
+								ops.push(`<button class="btn primary" data-act="unlock" data-id="${u.id}">解除锁定</button>`);
+							}
 							ops.push(`<button class="btn warn" data-act="delete" data-id="${u.id}">删除</button>`);
 						}
 						ops.push(`<button class="btn primary" data-act="pwd" data-id="${u.id}">重置密码</button>`);
@@ -159,16 +164,24 @@ export const prerender = true;
 							<td>${u.id}</td>
 							<td>${escapeHtml(u.name)}${self ? ' <span style="color:#8f7ba5">(我)</span>' : ""}</td>
 							<td><span class="tag ${u.role}">${u.role === "admin" ? "管理员" : "成员"}</span></td>
-							<td><span class="tag ${u.status}">${u.status === "active" ? "正常" : "已封禁"}</span></td>
+							<td><span class="tag ${u.status}">${u.status === "active" ? "正常" : "已封禁"}</span>${u.locked_until && u.locked_until > Date.now() ? ' <span class="tag banned">锁定中</span>' : ""}</td>
 							<td>${fmt(u.created_at)}</td>
 							<td>${fmt(u.last_login)}</td>
-							<td class="mono">${escapeHtml(u.last_ip || "—")}</td>
+							<td class="mono">${recentLogs(u.id)}</td>
 							<td class="mono">${escapeHtml((u.last_ua || "—").slice(0, 46))}</td>
 							<td>${u.login_count ?? 0}</td>
 							<td style="white-space:nowrap">${ops.join(" ")}</td>
 						</tr>`;
 					})
 					.join("");
+			}
+
+			function recentLogs(uid) {
+				const list = allLogs.filter((l) => l.user_id === uid).slice(0, 3);
+				if (!list.length) return "—";
+				return list
+					.map((l) => `${fmt(l.at)} · ${escapeHtml(l.ip || "?")}${l.ok ? "" : ' <span style="color:#ff9aad">失败</span>'}`)
+					.join("<br>");
 			}
 
 			function escapeHtml(s) {
@@ -199,6 +212,13 @@ export const prerender = true;
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ id, action: "role", value: to }),
+					});
+					await loadUsers();
+				} else if (act === "unlock") {
+					await fetch("/api/admin/user", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id, action: "unlock" }),
 					});
 					await loadUsers();
 				} else if (act === "delete") {
