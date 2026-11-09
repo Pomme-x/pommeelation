@@ -12,7 +12,7 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 	mode: "meting",
 
 	// 默认音量 (0-1)
-	volume: 0.6,
+	volume: 0.35,
 
 	// 播放模式：'list'=列表循环, 'one'=单曲循环, 'random'=随机播放
 	playMode: "random",
