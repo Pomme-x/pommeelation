@@ -10,7 +10,7 @@ export interface Env {
 
 const COOKIE = "ff_auth";
 const SESSION_DAYS = 7;
-const PBKDF2_ITER = 210000;
+const PBKDF2_ITER = 100000; // Cloudflare Workers 的 PBKDF2 上限就是 10 万次
 
 const enc = new TextEncoder();
 
