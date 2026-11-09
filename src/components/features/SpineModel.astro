@@ -319,13 +319,26 @@ import { url } from "@/utils/url-utils";
     }
   }
 
-  /* ---------- 拖动 + 最小化 ---------- */
+  /* ---------- 拖动 + 缩放 + 最小化 ---------- */
   function setupDragAndToggle() {
     const container = document.getElementById("spine-model-container");
     const toggle = document.getElementById("spine-toggle");
     if (!container || !toggle) return;
 
-    // 恢复上次位置（localStorage）
+    // 右下角缩放手柄
+    let handle = document.getElementById("spine-resize");
+    if (!handle) {
+      handle = document.createElement("div");
+      handle.id = "spine-resize";
+      handle.title = "拖动调整大小";
+      handle.style.cssText =
+        "position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:4px;" +
+        "background:linear-gradient(135deg,rgba(180,120,255,.9),rgba(230,120,190,.9));" +
+        "border:1px solid rgba(255,255,255,.55);cursor:nwse-resize;z-index:1003;touch-action:none;";
+      container.appendChild(handle);
+    }
+
+    // 恢复上次位置和尺寸
     try {
       const saved = JSON.parse(localStorage.getItem("spine-pos") || "null");
       if (saved && typeof saved.left === "number") {
@@ -334,18 +347,46 @@ import { url } from "@/utils/url-utils";
         container.style.right = "auto";
         container.style.bottom = "auto";
       }
+      const savedSize = JSON.parse(localStorage.getItem("spine-size") || "null");
+      if (savedSize && savedSize.w) {
+        container.style.width = savedSize.w + "px";
+        container.style.height = savedSize.h + "px";
+        container.dataset.w = savedSize.w;
+        container.dataset.h = savedSize.h;
+      }
       if (localStorage.getItem("spine-minimized") === "1") {
         container.classList.add("spine-minimized");
         toggle.textContent = "◉";
+        container.dataset.prevW = container.style.width;
+        container.dataset.prevH = container.style.height;
+        container.style.width = "30px";
+        container.style.height = "30px";
       }
     } catch (e) {}
+
+    function applySize(w, h) {
+      w = Math.max(120, Math.min(620, Math.round(w)));
+      h = Math.max(150, Math.min(780, Math.round(h)));
+      container.style.width = w + "px";
+      container.style.height = h + "px";
+      container.dataset.w = w;
+      container.dataset.h = h;
+      const player = window.spinePlayerInstance;
+      if (player && typeof player.resize === "function") {
+        try { player.resize(w, h); } catch (e) {}
+      }
+      const canvas = document.querySelector("#spine-player-container canvas");
+      if (canvas) {
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+      }
+    }
 
     let sx = 0, sy = 0, ol = 0, ot = 0, dragging = false, moved = false;
 
     container.addEventListener("pointerdown", (e) => {
-      if (e.target === toggle) return;
+      if (e.target === toggle || e.target === handle) return;
       const r = container.getBoundingClientRect();
-      if (container.style.position !== "fixed") container.style.position = "fixed";
       container.style.left = r.left + "px";
       container.style.top = r.top + "px";
       container.style.right = "auto";
@@ -382,27 +423,62 @@ import { url } from "@/utils/url-utils";
     container.addEventListener("pointerup", endDrag);
     container.addEventListener("pointercancel", endDrag);
 
+    // 缩放手柄
+    let resizing = false, rw = 0, rh = 0, rx = 0, ry = 0;
+    handle.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const r = container.getBoundingClientRect();
+      resizing = true;
+      rw = r.width; rh = r.height;
+      rx = e.clientX; ry = e.clientY;
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    handle.addEventListener("pointermove", (e) => {
+      if (!resizing) return;
+      e.stopPropagation();
+      applySize(rw + (e.clientX - rx), rh + (e.clientY - ry));
+    });
+    function endResize(e) {
+      if (!resizing) return;
+      resizing = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+      try {
+        localStorage.setItem("spine-size", JSON.stringify({
+          w: parseInt(container.style.width, 10),
+          h: parseInt(container.style.height, 10)
+        }));
+      } catch (err) {}
+    }
+    handle.addEventListener("pointerup", endResize);
+    handle.addEventListener("pointercancel", endResize);
+
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
       const mini = container.classList.toggle("spine-minimized");
       toggle.textContent = mini ? "◉" : "－";
       try { localStorage.setItem("spine-minimized", mini ? "1" : "0"); } catch (err) {}
-      // 收起后缩小成一个小圆点，展开时恢复原尺寸
       if (mini) {
-        container.dataset.fullW = String(spineModelConfig.size.width);
-        container.dataset.fullH = String(spineModelConfig.size.height);
+        container.dataset.prevW = container.style.width;
+        container.dataset.prevH = container.style.height;
         container.style.width = "30px";
         container.style.height = "30px";
       } else {
-        container.style.width = (container.dataset.fullW || spineModelConfig.size.width) + "px";
-        container.style.height = (container.dataset.fullH || spineModelConfig.size.height) + "px";
+        container.style.width = (container.dataset.w ? container.dataset.w + "px" : container.dataset.prevW);
+        container.style.height = (container.dataset.h ? container.dataset.h + "px" : container.dataset.prevH);
+        const player = window.spinePlayerInstance;
+        if (player && typeof player.resize === "function") {
+          try {
+            player.resize(parseInt(container.style.width, 10), parseInt(container.style.height, 10));
+          } catch (err) {}
+        }
       }
     });
 
-    // 收起状态下，看板娘画布隐藏
     const style = document.createElement("style");
     style.textContent = `
       #spine-model-container.spine-minimized #spine-player-container { display: none !important; }
+      #spine-model-container.spine-minimized #spine-resize { display: none !important; }
       #spine-model-container.spine-minimized { opacity: .9; }
     `;
     document.head.appendChild(style);
