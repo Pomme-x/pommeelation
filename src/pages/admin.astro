@@ -1,0 +1,245 @@
+---
+// 管理后台：只有 admin 能进（服务端 middleware + 前端二次校验）
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>管理后台 · 欢愉剧场</title>
+		<style is:global>
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				min-height: 100vh;
+				font-family: system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+				background: #0e0816;
+				color: #eee6fa;
+			}
+			.top {
+				display: flex; align-items: center; justify-content: space-between;
+				padding: 16px 26px;
+				border-bottom: 1px solid rgba(200,150,255,.15);
+				background: rgba(24,14,36,.9);
+				position: sticky; top: 0; z-index: 10;
+				backdrop-filter: blur(10px);
+			}
+			.top h1 { margin: 0; font-size: 17px; letter-spacing: .06em; }
+			.top .who { font-size: 12.5px; color: #b49bc8; }
+			.actions { display: flex; gap: 10px; align-items: center; }
+			.btn {
+				padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(200,150,255,.3);
+				background: rgba(160,90,220,.18); color: #e8d9ff; font-size: 12.5px;
+				cursor: pointer; text-decoration: none; transition: background .2s;
+			}
+			.btn:hover { background: rgba(160,90,220,.32); }
+			.btn.warn { border-color: rgba(255,120,140,.4); background: rgba(200,60,80,.16); color: #ffc1cb; }
+			.btn.primary { border-color: rgba(120,200,255,.4); background: rgba(60,140,220,.2); color: #cfe8ff; }
+			main { max-width: 1180px; margin: 0 auto; padding: 22px 20px 60px; }
+			.panel {
+				margin-bottom: 20px; padding: 18px 20px; border-radius: 14px;
+				background: rgba(28,18,40,.62); border: 1px solid rgba(200,150,255,.14);
+			}
+			.panel h2 { margin: 0 0 12px; font-size: 14px; letter-spacing: .08em; color: #cfa8ff; }
+			.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+			label { display: block; font-size: 11.5px; color: #a893bd; margin-bottom: 5px; }
+			input {
+				padding: 8px 11px; border-radius: 8px; border: 1px solid rgba(200,150,255,.22);
+				background: rgba(12,8,18,.8); color: #fff; font-size: 13px; outline: none; width: 180px;
+			}
+			input:focus { border-color: #b072e0; }
+			table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+			th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid rgba(200,150,255,.1); vertical-align: top; }
+			th { color: #a893bd; font-weight: 500; font-size: 11.5px; letter-spacing: .05em; white-space: nowrap; }
+			tr:hover td { background: rgba(160,90,220,.06); }
+			.tag { display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 11px; }
+			.tag.admin { background: rgba(255,190,80,.16); color: #ffd98a; border: 1px solid rgba(255,190,80,.3); }
+			.tag.user { background: rgba(120,200,255,.12); color: #a9d8ff; border: 1px solid rgba(120,200,255,.25); }
+			.tag.active { background: rgba(110,230,160,.12); color: #9df0bf; border: 1px solid rgba(110,230,160,.25); }
+			.tag.banned { background: rgba(255,110,130,.14); color: #ffb0bd; border: 1px solid rgba(255,110,130,.3); }
+			.mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: #a99bb8; word-break: break-all; }
+			.msg { min-height: 20px; font-size: 12.5px; color: #9df0bf; }
+			.empty { padding: 26px; text-align: center; color: #8f7ba5; font-size: 13px; }
+			@media (max-width: 760px) {
+				.top { flex-wrap: wrap; gap: 10px; }
+				input { width: 130px; }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="top">
+			<h1>欢愉剧场 · 管理后台</h1>
+			<div class="actions">
+				<span class="who" id="who">校验身份中…</span>
+				<a class="btn" href="/">进入站点</a>
+				<button class="btn warn" id="logout">退出登录</button>
+			</div>
+		</div>
+		<main>
+			<div class="panel">
+				<h2>站点设置</h2>
+				<div class="row">
+					<div>
+						<label>注册名额上限</label>
+						<input id="setMax" type="number" min="1" max="999" />
+					</div>
+					<div>
+						<label>共享注册码</label>
+						<input id="setCode" type="text" />
+					</div>
+					<button class="btn primary" id="saveSettings">保存设置</button>
+					<div class="msg" id="settingsMsg"></div>
+				</div>
+			</div>
+
+			<div class="panel">
+				<h2>用户列表 <span id="userCount" style="color:#8f7ba5;font-weight:400"></span></h2>
+				<div style="overflow-x:auto">
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th><th>昵称</th><th>身份</th><th>状态</th>
+								<th>注册时间</th><th>最后登录</th><th>最近 IP</th>
+								<th>设备</th><th>登录次数</th><th>操作</th>
+							</tr>
+						</thead>
+						<tbody id="users"></tbody>
+					</table>
+				</div>
+				<div class="empty" id="empty" style="display:none">还没有用户</div>
+			</div>
+		</main>
+		<script>
+			const $ = (id) => document.getElementById(id);
+			const fmt = (ts) => (ts ? new Date(ts).toLocaleString("zh-CN", { hour12: false }) : "—");
+
+			let me = null;
+			let allUsers = [];
+
+			async function boot() {
+				const r = await fetch("/api/auth/me");
+				const d = await r.json();
+				if (!d.user) { location.replace("/login?next=/admin"); return; }
+				if (d.user.role !== "admin") { location.replace("/"); return; }
+				me = d.user;
+				$("who").textContent = `${me.name} · 管理员`;
+				await loadSettings();
+				await loadUsers();
+			}
+
+			async function loadSettings() {
+				const r = await fetch("/api/admin/settings");
+				if (!r.ok) return;
+				const d = await r.json();
+				$("setMax").value = d.max_users || "";
+				$("setCode").value = d.register_code || "";
+			}
+
+			async function loadUsers() {
+				const r = await fetch("/api/admin/users");
+				if (!r.ok) { $("users").innerHTML = ""; $("empty").style.display = "block"; return; }
+				const d = await r.json();
+				allUsers = d.users || [];
+				$("userCount").textContent = `（${allUsers.length} 人）`;
+				$("empty").style.display = allUsers.length ? "none" : "block";
+				$("users").innerHTML = allUsers
+					.map((u) => {
+						const self = u.id === me.id;
+						const ops = [];
+						if (!self) {
+							ops.push(`<button class="btn" data-act="role" data-id="${u.id}" data-v="${u.role === "admin" ? "user" : "admin"}">${u.role === "admin" ? "降为用户" : "设为管理员"}</button>`);
+							ops.push(`<button class="btn warn" data-act="status" data-id="${u.id}" data-v="${u.status === "active" ? "ban" : "unban"}">${u.status === "active" ? "封禁" : "解封"}</button>`);
+							ops.push(`<button class="btn warn" data-act="delete" data-id="${u.id}">删除</button>`);
+						}
+						ops.push(`<button class="btn primary" data-act="pwd" data-id="${u.id}">重置密码</button>`);
+						return `<tr>
+							<td>${u.id}</td>
+							<td>${escapeHtml(u.name)}${self ? ' <span style="color:#8f7ba5">(我)</span>' : ""}</td>
+							<td><span class="tag ${u.role}">${u.role === "admin" ? "管理员" : "成员"}</span></td>
+							<td><span class="tag ${u.status}">${u.status === "active" ? "正常" : "已封禁"}</span></td>
+							<td>${fmt(u.created_at)}</td>
+							<td>${fmt(u.last_login)}</td>
+							<td class="mono">${escapeHtml(u.last_ip || "—")}</td>
+							<td class="mono">${escapeHtml((u.last_ua || "—").slice(0, 46))}</td>
+							<td>${u.login_count ?? 0}</td>
+							<td style="white-space:nowrap">${ops.join(" ")}</td>
+						</tr>`;
+					})
+					.join("");
+			}
+
+			function escapeHtml(s) {
+				return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+			}
+
+			$("users").addEventListener("click", async (e) => {
+				const btn = e.target.closest("button[data-act]");
+				if (!btn) return;
+				const id = parseInt(btn.dataset.id, 10);
+				const act = btn.dataset.act;
+				const u = allUsers.find((x) => x.id === id);
+				if (!u) return;
+
+				if (act === "status") {
+					const to = btn.dataset.v;
+					if (!confirm(`确定${to === "ban" ? "封禁" : "解封"}「${u.name}」吗？`)) return;
+					await fetch("/api/admin/user", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id, action: to }),
+					});
+					await loadUsers();
+				} else if (act === "role") {
+					const to = btn.dataset.v;
+					if (!confirm(`把「${u.name}」设为${to === "admin" ? "管理员" : "普通成员"}？`)) return;
+					await fetch("/api/admin/user", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id, action: "role", value: to }),
+					});
+					await loadUsers();
+				} else if (act === "delete") {
+					if (!confirm(`确定删除「${u.name}」吗？这个操作不可恢复。`)) return;
+					await fetch("/api/admin/user", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id, action: "delete" }),
+					});
+					await loadUsers();
+				} else if (act === "pwd") {
+					const pwd = prompt(`给「${u.name}」设置新密码（至少 6 位）：`);
+					if (!pwd) return;
+					if (pwd.length < 6) { alert("密码至少 6 位"); return; }
+					const r = await fetch("/api/admin/user", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id, action: "password", value: pwd }),
+					});
+					const d = await r.json();
+					alert(d.ok ? "密码已重置（对方会被强制重新登录）" : d.error || "失败");
+				}
+			});
+
+			$("saveSettings").addEventListener("click", async () => {
+				const r = await fetch("/api/admin/settings", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ max_users: $("setMax").value, register_code: $("setCode").value }),
+				});
+				const d = await r.json();
+				$("settingsMsg").textContent = d.ok ? "已保存" : d.error || "保存失败";
+				setTimeout(() => ($("settingsMsg").textContent = ""), 2500);
+			});
+
+			$("logout").addEventListener("click", async () => {
+				await fetch("/api/auth/logout", { method: "POST" });
+				location.replace("/login");
+			});
+
+			boot();
+		</script>
+	</body>
+</html>
