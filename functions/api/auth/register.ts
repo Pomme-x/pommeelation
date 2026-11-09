@@ -13,6 +13,7 @@ import {
 } from "../../_lib/auth";
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
+	try {
 	const { request, env } = context;
 
 	let body: any;
@@ -71,4 +72,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 	return json({ ok: true, role: isFirst ? "admin" : "user" }, 200, {
 		"Set-Cookie": sessionCookie(token, 7 * 86400),
 	});
+	} catch (e: any) {
+		console.error("register failed:", e);
+		return json({ error: "注册失败，请稍后再试" }, 500);
+	}
 };
