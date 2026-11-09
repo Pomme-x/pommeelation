@@ -10,7 +10,7 @@ export interface Env {
 
 const COOKIE = "ff_auth";
 const SESSION_DAYS = 7;
-const PBKDF2_ITER = 120000;
+const PBKDF2_ITER = 210000;
 
 const enc = new TextEncoder();
 
