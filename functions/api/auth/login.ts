@@ -88,6 +88,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 		.bind(token, row.id, now, expires, ip, ua)
 		.run();
 
+	// 每个账号最多保留最近 5 个会话，旧的自动失效
+	try {
+		const olds = await env.DB.prepare(
+			"SELECT token FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 5",
+		)
+			.bind(row.id)
+			.all<{ token: string }>();
+		for (const o of olds.results || []) {
+			await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(o.token).run();
+		}
+	} catch {
+		/* ignore */
+	}
+
 	await logLogin(env, row.id, row.name, ip, ua, true);
 
 	return json({ ok: true, name: row.name, role: row.role }, 200, {
