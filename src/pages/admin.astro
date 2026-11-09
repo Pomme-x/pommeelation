@@ -1,5 +1,5 @@
 ---
-// 管理后台：只有 admin 能进（服务端 middleware + 前端二次校验）
+// 管理后台：用户管理 + 文章管理（只有 admin 能进）
 export const prerender = true;
 ---
 
@@ -13,47 +13,50 @@ export const prerender = true;
 		<style is:global>
 			* { box-sizing: border-box; }
 			body {
-				margin: 0;
-				min-height: 100vh;
+				margin: 0; min-height: 100vh;
 				font-family: system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
-				background: #0e0816;
-				color: #eee6fa;
+				background: #0e0816; color: #eee6fa;
 			}
 			.top {
-				display: flex; align-items: center; justify-content: space-between;
-				padding: 16px 26px;
-				border-bottom: 1px solid rgba(200,150,255,.15);
-				background: rgba(24,14,36,.9);
-				position: sticky; top: 0; z-index: 10;
-				backdrop-filter: blur(10px);
+				display: flex; align-items: center; justify-content: space-between; gap: 14px;
+				padding: 14px 26px; border-bottom: 1px solid rgba(200,150,255,.15);
+				background: rgba(24,14,36,.92); position: sticky; top: 0; z-index: 30;
+				backdrop-filter: blur(10px); flex-wrap: wrap;
 			}
-			.top h1 { margin: 0; font-size: 17px; letter-spacing: .06em; }
-			.top .who { font-size: 12.5px; color: #b49bc8; }
-			.actions { display: flex; gap: 10px; align-items: center; }
+			.top h1 { margin: 0; font-size: 16px; letter-spacing: .06em; }
+			.actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
 			.btn {
-				padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(200,150,255,.3);
+				padding: 7px 13px; border-radius: 8px; border: 1px solid rgba(200,150,255,.3);
 				background: rgba(160,90,220,.18); color: #e8d9ff; font-size: 12.5px;
-				cursor: pointer; text-decoration: none; transition: background .2s;
+				cursor: pointer; text-decoration: none; transition: background .2s; white-space: nowrap;
 			}
 			.btn:hover { background: rgba(160,90,220,.32); }
 			.btn.warn { border-color: rgba(255,120,140,.4); background: rgba(200,60,80,.16); color: #ffc1cb; }
 			.btn.primary { border-color: rgba(120,200,255,.4); background: rgba(60,140,220,.2); color: #cfe8ff; }
-			main { max-width: 1180px; margin: 0 auto; padding: 22px 20px 60px; }
+			.btn.ghost { background: transparent; }
+			.tabs { display: flex; gap: 8px; padding: 14px 20px 0; max-width: 1180px; margin: 0 auto; }
+			.tab {
+				padding: 9px 18px; border-radius: 10px 10px 0 0; cursor: pointer;
+				background: rgba(28,18,40,.45); border: 1px solid rgba(200,150,255,.14); border-bottom: 0;
+				color: #b49bc8; font-size: 13px;
+			}
+			.tab.on { background: rgba(36,22,52,.95); color: #f0e2ff; border-color: rgba(200,150,255,.35); }
+			main { max-width: 1180px; margin: 0 auto; padding: 0 20px 70px; }
 			.panel {
 				margin-bottom: 20px; padding: 18px 20px; border-radius: 14px;
 				background: rgba(28,18,40,.62); border: 1px solid rgba(200,150,255,.14);
 			}
 			.panel h2 { margin: 0 0 12px; font-size: 14px; letter-spacing: .08em; color: #cfa8ff; }
-			.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+			.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 			label { display: block; font-size: 11.5px; color: #a893bd; margin-bottom: 5px; }
-			input {
+			input, select, textarea {
 				padding: 8px 11px; border-radius: 8px; border: 1px solid rgba(200,150,255,.22);
-				background: rgba(12,8,18,.8); color: #fff; font-size: 13px; outline: none; width: 180px;
+				background: rgba(12,8,18,.85); color: #fff; font-size: 13px; outline: none;
 			}
-			input:focus { border-color: #b072e0; }
+			input:focus, textarea:focus, select:focus { border-color: #b072e0; }
 			table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 			th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid rgba(200,150,255,.1); vertical-align: top; }
-			th { color: #a893bd; font-weight: 500; font-size: 11.5px; letter-spacing: .05em; white-space: nowrap; }
+			th { color: #a893bd; font-weight: 500; font-size: 11.5px; white-space: nowrap; }
 			tr:hover td { background: rgba(160,90,220,.06); }
 			.tag { display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 11px; }
 			.tag.admin { background: rgba(255,190,80,.16); color: #ffd98a; border: 1px solid rgba(255,190,80,.3); }
@@ -61,11 +64,28 @@ export const prerender = true;
 			.tag.active { background: rgba(110,230,160,.12); color: #9df0bf; border: 1px solid rgba(110,230,160,.25); }
 			.tag.banned { background: rgba(255,110,130,.14); color: #ffb0bd; border: 1px solid rgba(255,110,130,.3); }
 			.mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: #a99bb8; word-break: break-all; }
-			.msg { min-height: 20px; font-size: 12.5px; color: #9df0bf; }
+			.msg { min-height: 18px; font-size: 12.5px; color: #9df0bf; }
 			.empty { padding: 26px; text-align: center; color: #8f7ba5; font-size: 13px; }
+			.editor-mask {
+				position: fixed; inset: 0; background: rgba(6,3,10,.82); z-index: 100;
+				display: none; align-items: center; justify-content: center; padding: 20px;
+			}
+			.editor-mask.on { display: flex; }
+			.editor {
+				width: min(1000px, 96vw); max-height: 92vh; overflow: auto;
+				background: #1a1026; border: 1px solid rgba(200,150,255,.25);
+				border-radius: 16px; padding: 20px;
+			}
+			.editor h3 { margin: 0 0 14px; font-size: 15px; color: #e6cfff; }
+			.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; }
+			.fld { display: flex; flex-direction: column; }
+			.fld.full { grid-column: 1 / -1; }
+			textarea.body { width: 100%; min-height: 320px; font-family: ui-monospace, Consolas, monospace; line-height: 1.6; resize: vertical; }
+			.editor .foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+			.hint { font-size: 11px; color: #8f7ba5; margin-top: 4px; }
 			@media (max-width: 760px) {
-				.top { flex-wrap: wrap; gap: 10px; }
-				input { width: 130px; }
+				input { width: 100%; }
+				.top { padding: 12px 14px; }
 			}
 		</style>
 	</head>
@@ -73,80 +93,279 @@ export const prerender = true;
 		<div class="top">
 			<h1>欢愉剧场 · 管理后台</h1>
 			<div class="actions">
-				<span class="who" id="who">校验身份中…</span>
-				<a class="btn" href="/">进入站点</a>
-				<button class="btn warn" id="logout">退出登录</button>
+				<span class="mono" id="who">校验身份中…</span>
+				<a class="btn" href="/" target="_blank">看站点</a>
+				<button class="btn warn" id="logout">退出</button>
 			</div>
 		</div>
-		<main>
-			<div class="panel">
-				<h2>站点设置</h2>
-				<div class="row">
-					<div>
-						<label>注册名额上限</label>
-						<input id="setMax" type="number" min="1" max="999" />
-					</div>
-					<div>
-						<label>共享注册码</label>
-						<input id="setCode" type="text" />
-					</div>
-					<button class="btn primary" id="saveSettings">保存设置</button>
-					<div class="msg" id="settingsMsg"></div>
-				</div>
-			</div>
 
-			<div class="panel">
-				<h2>用户列表 <span id="userCount" style="color:#8f7ba5;font-weight:400"></span></h2>
-				<div style="overflow-x:auto">
-					<table>
-						<thead>
-							<tr>
-								<th>ID</th><th>昵称</th><th>身份</th><th>状态</th>
-								<th>注册时间</th><th>最后登录</th><th>最近登录记录（时间 / IP）</th>
-								<th>设备</th><th>登录次数</th><th>操作</th>
-							</tr>
-						</thead>
-						<tbody id="users"></tbody>
-					</table>
+		<div class="tabs">
+			<div class="tab on" data-tab="posts">文章管理</div>
+			<div class="tab" data-tab="users">用户管理</div>
+			<div class="tab" data-tab="settings">站点设置</div>
+		</div>
+
+		<main>
+			<section id="sec-posts">
+				<div class="panel">
+					<h2>文章列表 <span id="postCount" style="color:#8f7ba5;font-weight:400"></span></h2>
+					<div class="row" style="margin-bottom:12px">
+						<button class="btn primary" id="newPost">＋ 写新文章</button>
+						<button class="btn" id="importPdf">📄 从 PDF 导入</button>
+						<button class="btn ghost" id="reloadPosts">刷新</button>
+						<input type="file" id="pdfFile" accept="application/pdf" style="display:none" />
+						<span class="hint" id="pdfStatus"></span>
+					</div>
+					<div style="overflow-x:auto">
+						<table>
+							<thead>
+								<tr><th>标题</th><th>日期</th><th>分类</th><th>标签</th><th>操作</th></tr>
+							</thead>
+							<tbody id="posts"></tbody>
+						</table>
+					</div>
+					<div class="empty" id="postsEmpty" style="display:none">还没有文章，点「写新文章」开始</div>
 				</div>
-				<div class="empty" id="empty" style="display:none">还没有用户</div>
-			</div>
+			</section>
+
+			<section id="sec-users" style="display:none">
+				<div class="panel">
+					<h2>用户列表 <span id="userCount" style="color:#8f7ba5;font-weight:400"></span></h2>
+					<div style="overflow-x:auto">
+						<table>
+							<thead>
+								<tr>
+									<th>ID</th><th>昵称</th><th>身份</th><th>状态</th>
+									<th>注册时间</th><th>最近登录记录（时间 / IP）</th>
+									<th>设备</th><th>次数</th><th>操作</th>
+								</tr>
+							</thead>
+							<tbody id="users"></tbody>
+						</table>
+					</div>
+					<div class="empty" id="usersEmpty" style="display:none">还没有用户</div>
+				</div>
+			</section>
+
+			<section id="sec-settings" style="display:none">
+				<div class="panel">
+					<h2>注册与安全</h2>
+					<div class="row">
+						<div><label>注册名额上限</label><input id="setMax" type="number" min="1" max="999" /></div>
+						<div><label>共享注册码</label><input id="setCode" type="text" /></div>
+						<button class="btn primary" id="saveSettings">保存设置</button>
+						<div class="msg" id="settingsMsg"></div>
+					</div>
+					<p class="hint">普通成员 6 位密码即可；管理员（你）重置密码时强制 12 位 + 大小写数字符号。</p>
+				</div>
+			</section>
 		</main>
+
+		<div class="editor-mask" id="editorMask">
+			<div class="editor">
+				<h3 id="editorTitle">写新文章</h3>
+				<div class="grid">
+					<div class="fld"><label>标题</label><input id="fTitle" /></div>
+					<div class="fld"><label>发布日期</label><input id="fPublished" type="date" /></div>
+					<div class="fld"><label>分类</label><input id="fCategory" placeholder="欢愉考据 / 剧场手记" /></div>
+					<div class="fld"><label>标签（逗号分隔）</label><input id="fTags" placeholder="欢愉, 花火" /></div>
+					<div class="fld"><label>URL 别名（英文）</label><input id="fSlug" placeholder="my-post" /></div>
+					<div class="fld"><label>简介</label><input id="fDescription" /></div>
+					<div class="fld"><label>置顶</label><select id="fPinned"><option value="">否</option><option value="1">是</option></select></div>
+					<div class="fld"><label>草稿</label><select id="fDraft"><option value="">否</option><option value="1">是</option></select></div>
+					<div class="fld full">
+						<label>正文（Markdown）</label>
+						<textarea class="body" id="fBody" placeholder="# 标题&#10;&#10;正文…"></textarea>
+						<div class="hint">支持 Markdown；保存后 GitHub Actions 自动构建部署，约 1-2 分钟上线。</div>
+					</div>
+				</div>
+				<div class="foot">
+					<span class="msg" id="editorMsg"></span>
+					<button class="btn ghost" id="editorCancel">取消</button>
+					<button class="btn primary" id="editorSave">保存并发布</button>
+				</div>
+			</div>
+		</div>
+
 		<script>
 			const $ = (id) => document.getElementById(id);
 			const fmt = (ts) => (ts ? new Date(ts).toLocaleString("zh-CN", { hour12: false }) : "—");
+			let me = null, allUsers = [], allLogs = [], allPosts = [], editingPath = null;
 
-			let me = null;
-			let allUsers = [];
-			let allLogs = [];
+			function escapeHtml(s) {
+				return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+			}
 
 			async function boot() {
 				const r = await fetch("/api/auth/me");
 				const d = await r.json();
 				if (!d.user) { location.replace("/login?next=/admin"); return; }
-				if (d.user.role !== "admin") { location.replace(import.meta.env.BASE_URL || "/"); return; }
+				if (d.user.role !== "admin") { location.replace("/"); return; }
 				me = d.user;
-				$("who").textContent = `${me.name} · 管理员`;
-				await loadSettings();
-				await loadUsers();
+				$("who").textContent = me.name + " · 管理员";
+				loadPosts();
+				loadUsers();
+				loadSettings();
 			}
 
-			async function loadSettings() {
-				const r = await fetch("/api/admin/settings");
+			document.querySelectorAll(".tab").forEach((t) => {
+				t.addEventListener("click", () => {
+					document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on"));
+					t.classList.add("on");
+					for (const id of ["posts", "users", "settings"]) {
+						$("sec-" + id).style.display = t.dataset.tab === id ? "" : "none";
+					}
+				});
+			});
+
+			async function loadPosts() {
+				const r = await fetch("/api/admin/posts");
 				if (!r.ok) return;
 				const d = await r.json();
-				$("setMax").value = d.max_users || "";
-				$("setCode").value = d.register_code || "";
+				allPosts = d.posts || [];
+				$("postCount").textContent = "（" + allPosts.length + " 篇）";
+				$("postsEmpty").style.display = allPosts.length ? "none" : "block";
+				$("posts").innerHTML = allPosts
+					.map((p) => `<tr>
+						<td>${escapeHtml(p.title)}${p.pinned ? ' <span class="tag admin">置顶</span>' : ""}${p.draft ? ' <span class="tag banned">草稿</span>' : ""}</td>
+						<td>${escapeHtml(p.published || "—")}</td>
+						<td>${escapeHtml(p.category || "—")}</td>
+						<td>${(p.tags || []).map((t) => '<span class="tag user">' + escapeHtml(t) + "</span>").join(" ")}</td>
+						<td style="white-space:nowrap">
+							<button class="btn" data-edit="${escapeHtml(p.path)}">编辑</button>
+							<button class="btn warn" data-del="${escapeHtml(p.path)}">删除</button>
+						</td>
+					</tr>`)
+					.join("");
 			}
+
+			$("posts").addEventListener("click", async (e) => {
+				const ed = e.target.closest("button[data-edit]");
+				const dl = e.target.closest("button[data-del]");
+				if (ed) openEditor(ed.dataset.edit);
+				if (dl) {
+					if (!confirm("确定删除这篇文章吗？")) return;
+					const r = await fetch("/api/admin/post?path=" + encodeURIComponent(dl.dataset.del), { method: "DELETE" });
+					const d = await r.json();
+					if (d.ok) loadPosts();
+					else alert(d.error || "删除失败");
+				}
+			});
+
+			function openEditor(path) {
+				editingPath = path || null;
+				$("editorTitle").textContent = path ? "编辑文章" : "写新文章";
+				$("editorMsg").textContent = "";
+				if (!path) {
+					$("fTitle").value = "";
+					$("fPublished").value = new Date().toISOString().slice(0, 10);
+					$("fCategory").value = "剧场手记";
+					$("fTags").value = "";
+					$("fSlug").value = "";
+					$("fDescription").value = "";
+					$("fPinned").value = "";
+					$("fDraft").value = "";
+					$("fBody").value = "";
+					$("editorMask").classList.add("on");
+					return;
+				}
+				fetch("/api/admin/post?path=" + encodeURIComponent(path))
+					.then((r) => r.json())
+					.then((p) => {
+						$("fTitle").value = p.title || "";
+						$("fPublished").value = p.published || "";
+						$("fCategory").value = p.category || "";
+						$("fTags").value = (p.tags || []).join("，");
+						$("fSlug").value = p.slug || "";
+						$("fDescription").value = p.description || "";
+						$("fPinned").value = p.pinned ? "1" : "";
+						$("fDraft").value = p.draft ? "1" : "";
+						$("fBody").value = p.body || "";
+						$("editorMask").classList.add("on");
+					})
+					.catch(() => alert("读取失败"));
+			}
+
+			$("newPost").addEventListener("click", () => openEditor(null));
+			$("editorCancel").addEventListener("click", () => $("editorMask").classList.remove("on"));
+			$("reloadPosts").addEventListener("click", loadPosts);
+
+			$("editorSave").addEventListener("click", async () => {
+				const payload = {
+					path: editingPath || "",
+					title: $("fTitle").value.trim(),
+					published: $("fPublished").value,
+					category: $("fCategory").value.trim(),
+					tags: $("fTags").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+					slug: $("fSlug").value.trim(),
+					description: $("fDescription").value.trim(),
+					pinned: !!$("fPinned").value,
+					draft: !!$("fDraft").value,
+					body: $("fBody").value,
+				};
+				if (!payload.title) { $("editorMsg").textContent = "标题不能为空"; return; }
+				$("editorMsg").textContent = "保存中…";
+				const r = await fetch("/api/admin/post", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				});
+				const d = await r.json();
+				if (d.ok) {
+					$("editorMsg").textContent = "已提交，1-2 分钟后上线";
+					setTimeout(() => $("editorMask").classList.remove("on"), 900);
+					loadPosts();
+				} else {
+					$("editorMsg").textContent = d.error || "保存失败";
+				}
+			});
+
+			$("importPdf").addEventListener("click", () => $("pdfFile").click());
+			$("pdfFile").addEventListener("change", async (e) => {
+				const file = e.target.files[0];
+				if (!file) return;
+				$("pdfStatus").textContent = "正在解析 PDF…";
+				try {
+					const mod = await import("https://esm.sh/pdfjs-dist@4.6.82/build/pdf.min.mjs");
+					const pdfjs = mod.default || mod;
+					pdfjs.GlobalWorkerOptions.workerSrc = "https://esm.sh/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+					const buf = await file.arrayBuffer();
+					const doc = await pdfjs.getDocument({ data: buf }).promise;
+					let md = "";
+					for (let i = 1; i <= doc.numPages; i++) {
+						const page = await doc.getPage(i);
+						const tc = await page.getTextContent();
+						let lastY = null, line = "";
+						const lines = [];
+						for (const it of tc.items) {
+							const y = Math.round(it.transform[5]);
+							if (lastY !== null && Math.abs(y - lastY) > 4) { lines.push(line); line = ""; }
+							line += it.str;
+							lastY = y;
+						}
+						if (line) lines.push(line);
+						const text = lines.map((s) => s.trim()).filter(Boolean).join("\n");
+						md += (i > 1 ? "\n\n" : "") + text;
+					}
+					const title = file.name.replace(/\.pdf$/i, "");
+					openEditor(null);
+					$("fTitle").value = title;
+					$("fBody").value = md.trim();
+					$("pdfStatus").textContent = "已解析 " + doc.numPages + " 页，检查正文后保存";
+					$("pdfFile").value = "";
+				} catch (err) {
+					$("pdfStatus").textContent = "解析失败：" + err.message;
+				}
+			});
 
 			async function loadUsers() {
 				const r = await fetch("/api/admin/users");
-				if (!r.ok) { $("users").innerHTML = ""; $("empty").style.display = "block"; return; }
+				if (!r.ok) return;
 				const d = await r.json();
 				allUsers = d.users || [];
 				allLogs = d.logs || [];
-				$("userCount").textContent = `（${allUsers.length} 人）`;
-				$("empty").style.display = allUsers.length ? "none" : "block";
+				$("userCount").textContent = "（" + allUsers.length + " 人）";
+				$("usersEmpty").style.display = allUsers.length ? "none" : "block";
 				$("users").innerHTML = allUsers
 					.map((u) => {
 						const self = u.id === me.id;
@@ -154,9 +373,7 @@ export const prerender = true;
 						if (!self) {
 							ops.push(`<button class="btn" data-act="role" data-id="${u.id}" data-v="${u.role === "admin" ? "user" : "admin"}">${u.role === "admin" ? "降为用户" : "设为管理员"}</button>`);
 							ops.push(`<button class="btn warn" data-act="status" data-id="${u.id}" data-v="${u.status === "active" ? "ban" : "unban"}">${u.status === "active" ? "封禁" : "解封"}</button>`);
-							if (u.locked_until && u.locked_until > Date.now()) {
-								ops.push(`<button class="btn primary" data-act="unlock" data-id="${u.id}">解除锁定</button>`);
-							}
+							if (u.locked_until && u.locked_until > Date.now()) ops.push(`<button class="btn primary" data-act="unlock" data-id="${u.id}">解除锁定</button>`);
 							ops.push(`<button class="btn warn" data-act="delete" data-id="${u.id}">删除</button>`);
 						}
 						ops.push(`<button class="btn primary" data-act="pwd" data-id="${u.id}">重置密码</button>`);
@@ -166,9 +383,8 @@ export const prerender = true;
 							<td><span class="tag ${u.role}">${u.role === "admin" ? "管理员" : "成员"}</span></td>
 							<td><span class="tag ${u.status}">${u.status === "active" ? "正常" : "已封禁"}</span>${u.locked_until && u.locked_until > Date.now() ? ' <span class="tag banned">锁定中</span>' : ""}</td>
 							<td>${fmt(u.created_at)}</td>
-							<td>${fmt(u.last_login)}</td>
 							<td class="mono">${recentLogs(u.id)}</td>
-							<td class="mono">${escapeHtml((u.last_ua || "—").slice(0, 46))}</td>
+							<td class="mono">${escapeHtml((u.last_ua || "—").slice(0, 40))}</td>
 							<td>${u.login_count ?? 0}</td>
 							<td style="white-space:nowrap">${ops.join(" ")}</td>
 						</tr>`;
@@ -179,13 +395,7 @@ export const prerender = true;
 			function recentLogs(uid) {
 				const list = allLogs.filter((l) => l.user_id === uid).slice(0, 3);
 				if (!list.length) return "—";
-				return list
-					.map((l) => `${fmt(l.at)} · ${escapeHtml(l.ip || "?")}${l.ok ? "" : ' <span style="color:#ff9aad">失败</span>'}`)
-					.join("<br>");
-			}
-
-			function escapeHtml(s) {
-				return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+				return list.map((l) => `${fmt(l.at)} · ${escapeHtml(l.ip || "?")}${l.ok ? "" : ' <span style="color:#ff9aad">失败</span>'}`).join("<br>");
 			}
 
 			$("users").addEventListener("click", async (e) => {
@@ -195,54 +405,39 @@ export const prerender = true;
 				const act = btn.dataset.act;
 				const u = allUsers.find((x) => x.id === id);
 				if (!u) return;
-
 				if (act === "status") {
 					const to = btn.dataset.v;
 					if (!confirm(`确定${to === "ban" ? "封禁" : "解封"}「${u.name}」吗？`)) return;
-					await fetch("/api/admin/user", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ id, action: to }),
-					});
+					await fetch("/api/admin/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: to }) });
 					await loadUsers();
 				} else if (act === "role") {
 					const to = btn.dataset.v;
 					if (!confirm(`把「${u.name}」设为${to === "admin" ? "管理员" : "普通成员"}？`)) return;
-					await fetch("/api/admin/user", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ id, action: "role", value: to }),
-					});
+					await fetch("/api/admin/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "role", value: to }) });
 					await loadUsers();
 				} else if (act === "unlock") {
-					await fetch("/api/admin/user", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ id, action: "unlock" }),
-					});
+					await fetch("/api/admin/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "unlock" }) });
 					await loadUsers();
 				} else if (act === "delete") {
-					if (!confirm(`确定删除「${u.name}」吗？这个操作不可恢复。`)) return;
-					await fetch("/api/admin/user", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ id, action: "delete" }),
-					});
+					if (!confirm(`确定删除「${u.name}」吗？不可恢复。`)) return;
+					await fetch("/api/admin/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "delete" }) });
 					await loadUsers();
 				} else if (act === "pwd") {
-					const pwd = prompt(`给「${u.name}」设置新密码（至少 6 位）：`);
+					const pwd = prompt(`给「${u.name}」设置新密码${u.role === "admin" ? "（管理员：至少 12 位，含大小写+数字+符号）" : "（至少 6 位）"}：`);
 					if (!pwd) return;
-					if (pwd.length < 6) { alert("密码至少 6 位"); return; }
-					const r = await fetch("/api/admin/user", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ id, action: "password", value: pwd }),
-					});
+					const r = await fetch("/api/admin/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "password", value: pwd }) });
 					const d = await r.json();
-					alert(d.ok ? "密码已重置（对方会被强制重新登录）" : d.error || "失败");
+					alert(d.ok ? "密码已重置，对方会被强制重新登录" : d.error || "失败");
 				}
 			});
 
+			async function loadSettings() {
+				const r = await fetch("/api/admin/settings");
+				if (!r.ok) return;
+				const d = await r.json();
+				$("setMax").value = d.max_users || "";
+				$("setCode").value = d.register_code || "";
+			}
 			$("saveSettings").addEventListener("click", async () => {
 				const r = await fetch("/api/admin/settings", {
 					method: "POST",
