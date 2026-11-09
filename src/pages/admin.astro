@@ -123,7 +123,7 @@ export const prerender = true;
 				const r = await fetch("/api/auth/me");
 				const d = await r.json();
 				if (!d.user) { location.replace("/login?next=/admin"); return; }
-				if (d.user.role !== "admin") { location.replace("/"); return; }
+				if (d.user.role !== "admin") { location.replace(import.meta.env.BASE_URL || "/"); return; }
 				me = d.user;
 				$("who").textContent = `${me.name} · 管理员`;
 				await loadSettings();
