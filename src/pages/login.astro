@@ -30,6 +30,8 @@ export const prerender = true;
 			}
 			.card {
 				position: relative;
+				cursor: grab;
+				touch-action: none;
 				width: min(92vw, 380px);
 				padding: 34px 30px 26px;
 				border-radius: 20px;
@@ -130,6 +132,43 @@ export const prerender = true;
 					btn.textContent = "登 录";
 				}
 			});
-		</script>
+		
+			// 卡片可拖动：把登录框挪开就能看到完整的背景
+			(function () {
+				const card = document.getElementById("card");
+				if (!card) return;
+				let sx = 0, sy = 0, ol = 0, ot = 0, dragging = false;
+				function isInteractive(t) { return !!t.closest("input,button,a,textarea,select,label"); }
+				card.addEventListener("pointerdown", function (e) {
+					if (isInteractive(e.target)) return;
+					const r = card.getBoundingClientRect();
+					if (card.style.position !== "fixed") {
+						card.style.position = "fixed";
+						card.style.left = r.left + "px";
+						card.style.top = r.top + "px";
+						card.style.margin = "0";
+					}
+					sx = e.clientX; sy = e.clientY;
+					ol = parseFloat(card.style.left); ot = parseFloat(card.style.top);
+					dragging = true;
+					try { card.setPointerCapture(e.pointerId); } catch (err) {}
+					card.style.cursor = "grabbing";
+				});
+				card.addEventListener("pointermove", function (e) {
+					if (!dragging) return;
+					card.style.left = ol + e.clientX - sx + "px";
+					card.style.top = ot + e.clientY - sy + "px";
+				});
+				function end(e) {
+					if (!dragging) return;
+					dragging = false;
+					try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+					card.style.cursor = "grab";
+				}
+				card.addEventListener("pointerup", end);
+				card.addEventListener("pointercancel", end);
+				card.style.cursor = "grab";
+			})();
+</script>
 	</body>
 </html>
