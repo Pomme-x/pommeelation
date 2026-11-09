@@ -124,7 +124,8 @@ export const prerender = true;
 					if (res.ok) {
 						msg.style.color = "#8ef0b0";
 						msg.textContent = data.role === "admin" ? "注册成功，你是管理员，正在进入后台…" : "注册成功，正在进入剧场…";
-						setTimeout(() => location.replace(data.role === "admin" ? "/admin" : "/"), 700);
+						const BASE = import.meta.env.BASE_URL || "/";
+						setTimeout(() => location.replace(data.role === "admin" ? BASE + "admin" : BASE), 700);
 					} else {
 						msg.textContent = data.error || "注册失败";
 						btn.disabled = false;
