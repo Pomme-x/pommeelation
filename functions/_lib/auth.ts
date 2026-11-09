@@ -176,3 +176,37 @@ export async function setSetting(env: Env, key: string, value: string): Promise<
 export function cleanName(name: string): string {
 	return (name || "").trim().replace(/[^\u4e00-\u9fa5A-Za-z0-9_-]/g, "").slice(0, 20);
 }
+
+/** 密码强度：普通成员 6 位即可；管理员要求 12 位 + 大小写 + 数字 + 符号 */
+export function passwordStrength(pw: string): { weakOk: boolean; strongOk: boolean } {
+	const len = (pw || "").length;
+	const hasLower = /[a-z]/.test(pw);
+	const hasUpper = /[A-Z]/.test(pw);
+	const hasDigit = /\d/.test(pw);
+	const hasSymbol = /[^A-Za-z0-9]/.test(pw);
+	return {
+		weakOk: len >= 6,
+		strongOk: len >= 12 && hasLower && hasUpper && hasDigit && hasSymbol,
+	};
+}
+
+export const STRONG_PASSWORD_HINT = "管理员密码至少 12 位，且要同时包含大小写字母、数字和符号";
+
+export async function logLogin(
+	env: Env,
+	userId: number,
+	name: string,
+	ip: string,
+	ua: string,
+	ok: boolean,
+): Promise<void> {
+	try {
+		await env.DB.prepare(
+			"INSERT INTO login_logs(user_id, name, ip, ua, at, ok) VALUES (?, ?, ?, ?, ?, ?)",
+		)
+			.bind(userId, name, ip, ua, Date.now(), ok ? 1 : 0)
+			.run();
+	} catch {
+		/* 日志失败不影响登录 */
+	}
+}
