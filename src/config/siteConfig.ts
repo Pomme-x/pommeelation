@@ -48,7 +48,7 @@ export const siteConfig: SiteConfig = {
 	subtitle: "Aha's Theater · 以欢愉为名",
 
 	// 站点 URL
-	site_url: "https://pommeelation.com",
+	site_url: "https://pomme-x.github.io/pommeelation",
 
 	// 站点描述
 	description:
