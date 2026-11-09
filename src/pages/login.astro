@@ -101,7 +101,8 @@ export const prerender = true;
 			const msg = document.getElementById("msg");
 			const btn = document.getElementById("submit");
 			const params = new URLSearchParams(location.search);
-			const next = params.get("next") || "/";
+			const BASE = import.meta.env.BASE_URL || "/";
+			const next = params.get("next") || BASE;
 
 			form.addEventListener("submit", async (e) => {
 				e.preventDefault();
@@ -117,7 +118,7 @@ export const prerender = true;
 					});
 					const data = await res.json();
 					if (res.ok) {
-						location.replace(next.startsWith("/") ? next : "/");
+						location.replace(next.startsWith("/") ? next : BASE);
 					} else {
 						msg.textContent = data.error || "登录失败";
 						btn.disabled = false;
