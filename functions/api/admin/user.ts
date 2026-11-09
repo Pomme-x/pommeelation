@@ -1,4 +1,11 @@
-import { hashPassword, json, requireAdmin, type Env } from "../../_lib/auth";
+import {
+	hashPassword,
+	json,
+	passwordStrength,
+	requireAdmin,
+	STRONG_PASSWORD_HINT,
+	type Env,
+} from "../../_lib/auth";
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
 	const admin = await requireAdmin(context.env, context.request);
@@ -30,7 +37,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 			await context.env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
 			return json({ ok: true });
 		case "unban":
-			await context.env.DB.prepare("UPDATE users SET status = 'active' WHERE id = ?").bind(id).run();
+			await context.env.DB.prepare(
+				"UPDATE users SET status = 'active', failed_count = 0, locked_until = NULL WHERE id = ?",
+			)
+				.bind(id)
+				.run();
+			return json({ ok: true });
+		case "unlock":
+			await context.env.DB.prepare("UPDATE users SET failed_count = 0, locked_until = NULL WHERE id = ?")
+				.bind(id)
+				.run();
 			return json({ ok: true });
 		case "role":
 			await context.env.DB.prepare("UPDATE users SET role = ? WHERE id = ?")
@@ -39,7 +55,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 			return json({ ok: true });
 		case "password": {
 			const pwd = String(body.value || "");
-			if (pwd.length < 6) return json({ error: "密码至少 6 位" }, 400);
+			const strength = passwordStrength(pwd);
+			// 管理员账号强制强密码；普通成员 6 位即可
+			if (target.role === "admin") {
+				if (!strength.strongOk) return json({ error: STRONG_PASSWORD_HINT }, 400);
+			} else if (!strength.weakOk) {
+				return json({ error: "密码至少 6 位" }, 400);
+			}
 			const hash = await hashPassword(pwd);
 			await context.env.DB.prepare("UPDATE users SET pass_hash = ? WHERE id = ?").bind(hash, id).run();
 			await context.env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
@@ -47,6 +69,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 		}
 		case "delete":
 			await context.env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
+			await context.env.DB.prepare("DELETE FROM login_logs WHERE user_id = ?").bind(id).run();
 			await context.env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id).run();
 			return json({ ok: true });
 		default:
