@@ -14,5 +14,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 		`SELECT user_id, name, ip, ua, at, ok FROM login_logs ORDER BY at DESC LIMIT 600`,
 	).all();
 
-	return json({ users: rows.results || [], logs: logs.results || [], me: admin.name });
+	const online = await context.env.DB.prepare(
+		"SELECT COUNT(DISTINCT user_id) AS n FROM sessions WHERE expires_at > ?",
+	)
+		.bind(Date.now())
+		.first<{ n: number }>();
+
+	return json({
+		users: rows.results || [],
+		logs: logs.results || [],
+		me: admin.name,
+		online: online?.n || 0,
+	});
 };
