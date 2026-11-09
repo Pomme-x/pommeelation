@@ -131,7 +131,7 @@ export const prerender = true;
 
 			<section id="sec-users" style="display:none">
 				<div class="panel">
-					<h2>用户列表 <span id="userCount" style="color:#8f7ba5;font-weight:400"></span></h2>
+					<h2>用户列表 <span id="userCount" style="color:#8f7ba5;font-weight:400"></span> <span id="onlineCount" class="tag active" style="margin-left:8px"></span></h2>
 					<div style="overflow-x:auto">
 						<table>
 							<thead>
@@ -152,7 +152,7 @@ export const prerender = true;
 				<div class="panel">
 					<h2>注册与安全</h2>
 					<div class="row">
-						<div><label>注册名额上限</label><input id="setMax" type="number" min="1" max="999" /></div>
+						<div><label>注册名额（最多账号数）</label><input id="setMax" type="number" min="1" max="999" /></div>
 						<div><label>共享注册码</label><input id="setCode" type="text" /></div>
 						<button class="btn primary" id="saveSettings">保存设置</button>
 						<div class="msg" id="settingsMsg"></div>
@@ -366,6 +366,7 @@ export const prerender = true;
 				allUsers = d.users || [];
 				allLogs = d.logs || [];
 				$("userCount").textContent = "（" + allUsers.length + " 人）";
+				if (d.online !== undefined) $("onlineCount").textContent = "当前在线 " + d.online + " 人";
 				$("usersEmpty").style.display = allUsers.length ? "none" : "block";
 				$("users").innerHTML = allUsers
 					.map((u) => {
