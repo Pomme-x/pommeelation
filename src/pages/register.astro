@@ -1,0 +1,141 @@
+---
+// 注册页：独立布局
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>注册 · 欢愉剧场</title>
+		<style is:global>
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-family: system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+				background: #120a1d url("/assets/images/DesktopWallpaper/h1.webp") center/cover no-repeat;
+			}
+			body::before {
+				content: "";
+				position: fixed;
+				inset: 0;
+				background: radial-gradient(circle at 50% 40%, rgba(120, 30, 90, .4), rgba(10, 6, 16, .84));
+				pointer-events: none;
+			}
+			.card {
+				position: relative;
+				width: min(92vw, 380px);
+				padding: 34px 30px 26px;
+				border-radius: 20px;
+				background: rgba(28, 18, 40, .72);
+				border: 1px solid rgba(255, 150, 220, .22);
+				box-shadow: 0 24px 70px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255,255,255,.06);
+				backdrop-filter: blur(16px);
+				color: #f2e9ff;
+			}
+			h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .04em; }
+			.dot { color: #ff7ac0; }
+			.sub { margin: 0 0 20px; font-size: 12.5px; color: #b49bc8; }
+			.quota { margin-bottom: 18px; padding: 9px 12px; border-radius: 9px; background: rgba(255,122,192,.1); border: 1px solid rgba(255,122,192,.25); font-size: 12.5px; color: #ffb8dd; }
+			.field { margin-bottom: 14px; }
+			label { display: block; font-size: 12px; color: #c9b4dc; margin-bottom: 6px; }
+			input {
+				width: 100%; padding: 11px 13px; border-radius: 10px;
+				border: 1px solid rgba(255, 150, 220, .2);
+				background: rgba(12, 8, 18, .7); color: #fff; font-size: 14px; outline: none;
+				transition: border-color .2s, box-shadow .2s;
+			}
+			input:focus { border-color: #e075bb; box-shadow: 0 0 0 3px rgba(224, 117, 187, .18); }
+			.btn {
+				width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 10px;
+				background: linear-gradient(135deg, #d84ba0, #8b45d8); color: #fff;
+				font-size: 15px; letter-spacing: .16em; cursor: pointer; transition: filter .2s, transform .1s;
+			}
+			.btn:hover { filter: brightness(1.08); }
+			.btn:active { transform: scale(.98); }
+			.btn:disabled { opacity: .6; cursor: not-allowed; }
+			.msg { min-height: 18px; margin-top: 12px; font-size: 12.5px; color: #ff8fa3; }
+			.switch { margin-top: 16px; font-size: 12.5px; color: #a893bd; text-align: center; }
+			.switch a { color: #ff9fd0; text-decoration: none; }
+			.switch a:hover { text-decoration: underline; }
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h1>创建账号<span class="dot"> · </span>欢愉剧场</h1>
+			<p class="sub">注册名额有限，先到先得</p>
+			<div class="quota" id="quota">正在查询名额…</div>
+			<form id="form">
+				<div class="field">
+					<label>账号（昵称，1–20 位）</label>
+					<input type="text" name="name" placeholder="中英文 / 数字 / _ -" maxlength="20" autofocus required />
+				</div>
+				<div class="field">
+					<label>密码（至少 6 位）</label>
+					<input type="password" name="password" placeholder="设置你的登录密码" required />
+				</div>
+				<div class="field">
+					<label>注册码（站点主人提供）</label>
+					<input type="text" name="code" placeholder="请输入共享注册码" required />
+				</div>
+				<button class="btn" type="submit" id="submit">注 册</button>
+			</form>
+			<div class="msg" id="msg"></div>
+			<p class="switch">已有账号？<a href="/login">去登录</a></p>
+		</div>
+		<script>
+			const form = document.getElementById("form");
+			const msg = document.getElementById("msg");
+			const btn = document.getElementById("submit");
+			const quota = document.getElementById("quota");
+
+			fetch("/api/auth/stats")
+				.then((r) => r.json())
+				.then((d) => {
+					if (d.used !== undefined) quota.textContent = `注册名额　${d.used} / ${d.max}`;
+				})
+				.catch(() => {
+					quota.textContent = "注册名额查询失败";
+				});
+
+			form.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				msg.textContent = "";
+				btn.disabled = true;
+				btn.textContent = "注册中…";
+				try {
+					const fd = new FormData(form);
+					const res = await fetch("/api/auth/register", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							name: fd.get("name"),
+							password: fd.get("password"),
+							code: fd.get("code"),
+						}),
+					});
+					const data = await res.json();
+					if (res.ok) {
+						msg.style.color = "#8ef0b0";
+						msg.textContent = data.role === "admin" ? "注册成功，你是管理员，正在进入后台…" : "注册成功，正在进入剧场…";
+						setTimeout(() => location.replace(data.role === "admin" ? "/admin" : "/"), 700);
+					} else {
+						msg.textContent = data.error || "注册失败";
+						btn.disabled = false;
+						btn.textContent = "注 册";
+					}
+				} catch {
+					msg.textContent = "网络错误，稍后再试";
+					btn.disabled = false;
+					btn.textContent = "注 册";
+				}
+			});
+		</script>
+	</body>
+</html>
