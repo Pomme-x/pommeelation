@@ -10,6 +10,10 @@ series: 欢愉人物志
 seriesOrder: 2
 ---
 
+![花火](/gallery/sparkle/01.webp)
+
+![花火 · 火中](/gallery/sparkle/04.webp)
+
 ## 她是谁
 
 花火，假面愚者的一员，欢愉命途最张扬的代言人。
