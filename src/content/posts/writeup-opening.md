@@ -3,6 +3,8 @@ title: 开栏 · 破幕手记
 published: 2026-11-10
 description: CTF WriteUp 栏目。每一道题都是一层幕布，掀开之后是另一个世界。
 tags: [WriteUp, CTF, 网安]
+series: "破幕手记"
+seriesOrder: 1
 category: 破幕手记
 slug: writeup-opening
 ---
