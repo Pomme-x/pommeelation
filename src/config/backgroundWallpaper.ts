@@ -77,9 +77,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 					showName: true,
 				},
 				{
-					name: "音乐",
+					name: "归档",
 					icon: "material-symbols:music-note",
-					url: "/music/",
+					url: "/archive/",
 					showName: false,
 				},
 				{
