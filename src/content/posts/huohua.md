@@ -10,6 +10,10 @@ series: 欢愉人物志
 seriesOrder: 4
 ---
 
+![火花](/gallery/huohua/03.webp)
+
+![火花与花火](/gallery/huohua/09.webp)
+
 ## 先纠正一个误会
 
 「火花」和「花火」不是同一个人。
