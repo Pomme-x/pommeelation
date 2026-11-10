@@ -1,28 +1,32 @@
 ---
-// GIF 看板娘：可拖动、可缩放、可最小化，位置和尺寸存浏览器本地
+// 花火 GIF 看板娘：可拖动、可缩放、可最小化、点击有反馈 + 冒台词
 ---
 
 <div
 	id="gif-pet"
-	style="position:fixed;right:24px;bottom:24px;width:230px;height:230px;z-index:1000;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;"
+	style="position:fixed;right:24px;bottom:24px;width:230px;height:230px;z-index:1000;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;"
 >
+	<div
+		id="gif-pet-bubble"
+		style="position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%) translateY(6px);max-width:240px;padding:8px 12px;border-radius:10px;background:rgba(28,16,42,.94);border:1px solid rgba(210,140,255,.45);color:#f0e2ff;font-size:12.5px;line-height:1.5;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:5;box-shadow:0 6px 20px rgba(0,0,0,.45);"
+	></div>
 	<img
 		id="gif-pet-img"
-		src="/pio/sparkle.gif"
+		src="/assets/pet/sparkle.gif"
 		alt="花火"
 		draggable="false"
-		style="width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 24px rgba(0,0,0,.45));"
+		style="width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 24px rgba(0,0,0,.45));transform-origin:50% 85%;"
 	/>
 	<button
 		id="gif-pet-toggle"
 		title="收起 / 展开"
-		style="position:absolute;top:-4px;right:-4px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(200,150,255,.45);background:rgba(30,18,44,.92);color:#d9b8ff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(6px);"
+		style="position:absolute;top:-4px;right:-4px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(200,150,255,.45);background:rgba(30,18,44,.92);color:#d9b8ff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;backdrop-filter:blur(6px);"
 		>－</button
 	>
 	<div
 		id="gif-pet-resize"
 		title="拖动调整大小"
-		style="position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,rgba(180,120,255,.9),rgba(230,120,190,.9));border:1px solid rgba(255,255,255,.55);cursor:nwse-resize;z-index:2;touch-action:none;"
+		style="position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,rgba(180,120,255,.9),rgba(230,120,190,.9));border:1px solid rgba(255,255,255,.55);cursor:nwse-resize;z-index:6;touch-action:none;"
 	>
 	</div>
 </div>
@@ -33,10 +37,43 @@
 		const img = document.getElementById("gif-pet-img");
 		const toggle = document.getElementById("gif-pet-toggle");
 		const handle = document.getElementById("gif-pet-resize");
-		if (!box || !img || !toggle || !handle) return;
+		const bubble = document.getElementById("gif-pet-bubble");
+		if (!box || !img || !toggle || !handle || !bubble) return;
 
 		const MIN = 120,
 			MAX = 520;
+
+		const LINES = [
+			"欢愉剧场，今日开演～",
+			"阿哈在观众席上笑你呢",
+			"人生如戏，全靠演技",
+			"别太严肃，笑一个嘛",
+			"虚照又拖稿了……嘘",
+			"要一起去后台看看吗？",
+			"嘻嘻，被戳到了",
+			"假面愚者的头牌，花火大人是也！",
+			"今天也要开开心心的哦",
+		];
+
+		// 受击动画
+		const st = document.createElement("style");
+		st.textContent = `
+			@keyframes gifpet-hit {
+				0%   { transform: scale(1) rotate(0deg); }
+				15%  { transform: scale(.86) rotate(-7deg); }
+				30%  { transform: scale(1.1) rotate(6deg); }
+				45%  { transform: scale(.95) rotate(-4deg); }
+				60%  { transform: scale(1.05) rotate(3deg); }
+				80%  { transform: scale(.98) rotate(-1deg); }
+				100% { transform: scale(1) rotate(0deg); }
+			}
+			#gif-pet.gifpet-hit #gif-pet-img { animation: gifpet-hit .55s cubic-bezier(.36,.07,.19,.97); }
+			#gif-pet.gifpet-mini #gif-pet-img { display: none !important; }
+			#gif-pet.gifpet-mini #gif-pet-resize { display: none !important; }
+			#gif-pet.gifpet-mini #gif-pet-bubble { display: none !important; }
+			#gif-pet.gifpet-mini { opacity: .9; }
+		`;
+		document.head.appendChild(st);
 
 		function applySize(w, h) {
 			w = Math.max(MIN, Math.min(MAX, Math.round(w)));
@@ -68,21 +105,31 @@
 			}
 		} catch (e) {}
 
-		// 收起样式
-		const st = document.createElement("style");
-		st.textContent =
-			"#gif-pet.gifpet-mini img{display:none!important}" +
-			"#gif-pet.gifpet-mini #gif-pet-resize{display:none!important}" +
-			"#gif-pet.gifpet-mini{opacity:.9}";
-		document.head.appendChild(st);
+		// 冒泡台词
+		let bubbleTimer = null;
+		function say(text) {
+			bubble.textContent = text;
+			bubble.style.opacity = "1";
+			bubble.style.transform = "translateX(-50%) translateY(0)";
+			clearTimeout(bubbleTimer);
+			bubbleTimer = setTimeout(() => {
+				bubble.style.opacity = "0";
+				bubble.style.transform = "translateX(-50%) translateY(6px)";
+			}, 2600);
+		}
+
+		// 受击
+		let hitTimer = null;
+		function hit() {
+			box.classList.remove("gifpet-hit");
+			void box.offsetWidth;
+			box.classList.add("gifpet-hit");
+			clearTimeout(hitTimer);
+			hitTimer = setTimeout(() => box.classList.remove("gifpet-hit"), 600);
+		}
 
 		// 拖动
-		let sx = 0,
-			sy = 0,
-			ol = 0,
-			ot = 0,
-			dragging = false,
-			moved = false;
+		let sx = 0, sy = 0, ol = 0, ot = 0, dragging = false, moved = false;
 		box.addEventListener("pointerdown", (e) => {
 			if (e.target === toggle || e.target === handle) return;
 			const r = box.getBoundingClientRect();
@@ -90,19 +137,14 @@
 			box.style.top = r.top + "px";
 			box.style.right = "auto";
 			box.style.bottom = "auto";
-			sx = e.clientX;
-			sy = e.clientY;
-			ol = r.left;
-			ot = r.top;
-			dragging = true;
-			moved = false;
+			sx = e.clientX; sy = e.clientY; ol = r.left; ot = r.top;
+			dragging = true; moved = false;
 			box.style.cursor = "grabbing";
 			try { box.setPointerCapture(e.pointerId); } catch (err) {}
 		});
 		box.addEventListener("pointermove", (e) => {
 			if (!dragging) return;
-			const dx = e.clientX - sx,
-				dy = e.clientY - sy;
+			const dx = e.clientX - sx, dy = e.clientY - sy;
 			if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
 			box.style.left = ol + dx + "px";
 			box.style.top = ot + dy + "px";
@@ -110,35 +152,32 @@
 		function endDrag(e) {
 			if (!dragging) return;
 			dragging = false;
-			box.style.cursor = "grab";
+			box.style.cursor = "pointer";
 			try { box.releasePointerCapture(e.pointerId); } catch (err) {}
 			if (moved) {
 				try {
-					localStorage.setItem(
-						"gifpet-pos",
-						JSON.stringify({ left: parseFloat(box.style.left), top: parseFloat(box.style.top) }),
-					);
+					localStorage.setItem("gifpet-pos", JSON.stringify({ left: parseFloat(box.style.left), top: parseFloat(box.style.top) }));
 				} catch (err) {}
 			}
 		}
 		box.addEventListener("pointerup", endDrag);
 		box.addEventListener("pointercancel", endDrag);
 
+		// 点击（没拖动才触发）
+		box.addEventListener("click", (e) => {
+			if (e.target === toggle || e.target === handle) return;
+			if (moved) return;
+			hit();
+			say(LINES[Math.floor(Math.random() * LINES.length)]);
+		});
+
 		// 缩放
-		let resizing = false,
-			rw = 0,
-			rh = 0,
-			rx = 0,
-			ry = 0;
+		let resizing = false, rw = 0, rh = 0, rx = 0, ry = 0;
 		handle.addEventListener("pointerdown", (e) => {
 			e.stopPropagation();
 			e.preventDefault();
 			const r = box.getBoundingClientRect();
-			resizing = true;
-			rw = r.width;
-			rh = r.height;
-			rx = e.clientX;
-			ry = e.clientY;
+			resizing = true; rw = r.width; rh = r.height; rx = e.clientX; ry = e.clientY;
 			try { handle.setPointerCapture(e.pointerId); } catch (err) {}
 		});
 		handle.addEventListener("pointermove", (e) => {
@@ -151,16 +190,12 @@
 			resizing = false;
 			try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
 			try {
-				localStorage.setItem(
-					"gifpet-size",
-					JSON.stringify({ w: parseInt(box.style.width, 10), h: parseInt(box.style.height, 10) }),
-				);
+				localStorage.setItem("gifpet-size", JSON.stringify({ w: parseInt(box.style.width, 10), h: parseInt(box.style.height, 10) }));
 			} catch (err) {}
 		}
 		handle.addEventListener("pointerup", endResize);
 		handle.addEventListener("pointercancel", endResize);
 
-		// 收起 / 展开
 		toggle.addEventListener("click", (e) => {
 			e.stopPropagation();
 			const mini = box.classList.toggle("gifpet-mini");
