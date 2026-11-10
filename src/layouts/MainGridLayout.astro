@@ -2,6 +2,7 @@
 import Live2DWidget from "@components/features/Live2DWidget.astro";
 
 import SpineModel from "@components/features/SpineModel.astro";
+import GifPet from "@components/features/GifPet.astro";
 import Footer from "@components/layout/Footer.astro";
 import HeaderTopRow from "@components/layout/HeaderTopRow.astro";
 import NavMenuPanel from "@components/layout/NavMenuPanel.astro";
@@ -164,6 +165,7 @@ const {
         </div>
 
         <SpineModel></SpineModel>
+        <GifPet />
         {live2dWidgetConfig.enable && <Live2DWidget config={live2dWidgetConfig} />}
 
         {/* 页脚宽度跨「侧栏 + 内容栏」，故在 #content-column 之外；又在 Swup 容器之外，
