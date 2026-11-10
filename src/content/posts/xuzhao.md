@@ -10,6 +10,10 @@ series: 欢愉人物志
 seriesOrder: 3
 ---
 
+![虚照](/gallery/xuzhao/02.webp)
+
+![虚照 · 紫蓝](/gallery/xuzhao/05.webp)
+
 ## 一个拿笔的人
 
 虚照第一次出现在大家视野里的时候，讨论度最高的不是她的强度，是一个细节：**她手里拿着一支笔**。
