@@ -33,6 +33,18 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 			// 系列
 			LinkPresets.Series,
+
+			// 自定义栏目
+			{
+				name: "本周幕报",
+				url: "/archive/?category=%E6%9C%AC%E5%91%A8%E5%B9%95%E6%8A%A5",
+				icon: "material-symbols:calendar-month",
+			},
+			{
+				name: "破幕手记",
+				url: "/archive/?category=%E7%A0%B4%E5%B9%95%E6%89%8B%E8%AE%B0",
+				icon: "material-symbols:terminal",
+			},
 		],
 	});
 
