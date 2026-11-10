@@ -3,6 +3,8 @@ title: 开栏 · 本周幕报
 published: 2026-11-10
 description: 剧场的周报栏目。每周把散落在后台的碎片收拢成一份幕报，给时间留个坐标。
 tags: [周报, 剧场]
+series: "本周幕报"
+seriesOrder: 1
 category: 本周幕报
 slug: weekly-opening
 ---
