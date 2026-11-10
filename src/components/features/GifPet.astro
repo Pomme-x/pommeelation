@@ -1,0 +1,180 @@
+---
+// GIF 看板娘：可拖动、可缩放、可最小化，位置和尺寸存浏览器本地
+---
+
+<div
+	id="gif-pet"
+	style="position:fixed;right:24px;bottom:24px;width:230px;height:230px;z-index:1000;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;"
+>
+	<img
+		id="gif-pet-img"
+		src="/pio/sparkle.gif"
+		alt="花火"
+		draggable="false"
+		style="width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 24px rgba(0,0,0,.45));"
+	/>
+	<button
+		id="gif-pet-toggle"
+		title="收起 / 展开"
+		style="position:absolute;top:-4px;right:-4px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(200,150,255,.45);background:rgba(30,18,44,.92);color:#d9b8ff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(6px);"
+		>－</button
+	>
+	<div
+		id="gif-pet-resize"
+		title="拖动调整大小"
+		style="position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,rgba(180,120,255,.9),rgba(230,120,190,.9));border:1px solid rgba(255,255,255,.55);cursor:nwse-resize;z-index:2;touch-action:none;"
+	>
+	</div>
+</div>
+
+<script is:inline>
+	(function () {
+		const box = document.getElementById("gif-pet");
+		const img = document.getElementById("gif-pet-img");
+		const toggle = document.getElementById("gif-pet-toggle");
+		const handle = document.getElementById("gif-pet-resize");
+		if (!box || !img || !toggle || !handle) return;
+
+		const MIN = 120,
+			MAX = 520;
+
+		function applySize(w, h) {
+			w = Math.max(MIN, Math.min(MAX, Math.round(w)));
+			h = Math.max(MIN, Math.min(MAX, Math.round(h)));
+			box.style.width = w + "px";
+			box.style.height = h + "px";
+			box.dataset.w = w;
+			box.dataset.h = h;
+		}
+
+		// 恢复上次状态
+		try {
+			const p = JSON.parse(localStorage.getItem("gifpet-pos") || "null");
+			if (p && typeof p.left === "number") {
+				box.style.left = p.left + "px";
+				box.style.top = p.top + "px";
+				box.style.right = "auto";
+				box.style.bottom = "auto";
+			}
+			const s = JSON.parse(localStorage.getItem("gifpet-size") || "null");
+			if (s && s.w) applySize(s.w, s.h);
+			if (localStorage.getItem("gifpet-mini") === "1") {
+				box.classList.add("gifpet-mini");
+				toggle.textContent = "◉";
+				box.dataset.prevW = box.style.width;
+				box.dataset.prevH = box.style.height;
+				box.style.width = "30px";
+				box.style.height = "30px";
+			}
+		} catch (e) {}
+
+		// 收起样式
+		const st = document.createElement("style");
+		st.textContent =
+			"#gif-pet.gifpet-mini img{display:none!important}" +
+			"#gif-pet.gifpet-mini #gif-pet-resize{display:none!important}" +
+			"#gif-pet.gifpet-mini{opacity:.9}";
+		document.head.appendChild(st);
+
+		// 拖动
+		let sx = 0,
+			sy = 0,
+			ol = 0,
+			ot = 0,
+			dragging = false,
+			moved = false;
+		box.addEventListener("pointerdown", (e) => {
+			if (e.target === toggle || e.target === handle) return;
+			const r = box.getBoundingClientRect();
+			box.style.left = r.left + "px";
+			box.style.top = r.top + "px";
+			box.style.right = "auto";
+			box.style.bottom = "auto";
+			sx = e.clientX;
+			sy = e.clientY;
+			ol = r.left;
+			ot = r.top;
+			dragging = true;
+			moved = false;
+			box.style.cursor = "grabbing";
+			try { box.setPointerCapture(e.pointerId); } catch (err) {}
+		});
+		box.addEventListener("pointermove", (e) => {
+			if (!dragging) return;
+			const dx = e.clientX - sx,
+				dy = e.clientY - sy;
+			if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+			box.style.left = ol + dx + "px";
+			box.style.top = ot + dy + "px";
+		});
+		function endDrag(e) {
+			if (!dragging) return;
+			dragging = false;
+			box.style.cursor = "grab";
+			try { box.releasePointerCapture(e.pointerId); } catch (err) {}
+			if (moved) {
+				try {
+					localStorage.setItem(
+						"gifpet-pos",
+						JSON.stringify({ left: parseFloat(box.style.left), top: parseFloat(box.style.top) }),
+					);
+				} catch (err) {}
+			}
+		}
+		box.addEventListener("pointerup", endDrag);
+		box.addEventListener("pointercancel", endDrag);
+
+		// 缩放
+		let resizing = false,
+			rw = 0,
+			rh = 0,
+			rx = 0,
+			ry = 0;
+		handle.addEventListener("pointerdown", (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			const r = box.getBoundingClientRect();
+			resizing = true;
+			rw = r.width;
+			rh = r.height;
+			rx = e.clientX;
+			ry = e.clientY;
+			try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+		});
+		handle.addEventListener("pointermove", (e) => {
+			if (!resizing) return;
+			e.stopPropagation();
+			applySize(rw + (e.clientX - rx), rh + (e.clientY - ry));
+		});
+		function endResize(e) {
+			if (!resizing) return;
+			resizing = false;
+			try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+			try {
+				localStorage.setItem(
+					"gifpet-size",
+					JSON.stringify({ w: parseInt(box.style.width, 10), h: parseInt(box.style.height, 10) }),
+				);
+			} catch (err) {}
+		}
+		handle.addEventListener("pointerup", endResize);
+		handle.addEventListener("pointercancel", endResize);
+
+		// 收起 / 展开
+		toggle.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const mini = box.classList.toggle("gifpet-mini");
+			toggle.textContent = mini ? "◉" : "－";
+			try { localStorage.setItem("gifpet-mini", mini ? "1" : "0"); } catch (err) {}
+			if (mini) {
+				box.dataset.prevW = box.style.width;
+				box.dataset.prevH = box.style.height;
+				box.style.width = "30px";
+				box.style.height = "30px";
+			} else {
+				box.style.width = (box.dataset.w ? box.dataset.w + "px" : box.dataset.prevW);
+				box.style.height = (box.dataset.h ? box.dataset.h + "px" : box.dataset.prevH);
+			}
+		});
+	})();
+</script>
