@@ -1,0 +1,278 @@
+---
+// AI 助手页：仅管理员可用（后端 /api/ai/chat 会再校验一次）
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>AI 助手 · 欢愉剧场</title>
+		<style is:global>
+			* { box-sizing: border-box; }
+			html, body { height: 100%; }
+			body {
+				margin: 0;
+				font-family: system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+				color: #efe6f7;
+				background: #120a1d url("/assets/images/DesktopWallpaper/h4.webp") center/cover fixed no-repeat;
+				display: flex;
+				flex-direction: column;
+			}
+			body::before {
+				content: "";
+				position: fixed;
+				inset: 0;
+				background: radial-gradient(circle at 50% 30%, rgba(90, 30, 120, .42), rgba(10, 6, 16, .88));
+				pointer-events: none;
+				z-index: 0;
+			}
+			header, main, footer { position: relative; z-index: 1; }
+
+			header {
+				display: flex; align-items: center; gap: 14px;
+				padding: 14px 20px;
+				border-bottom: 1px solid rgba(190, 140, 255, .18);
+				backdrop-filter: blur(10px);
+				background: rgba(20, 10, 32, .55);
+			}
+			header h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: .5px; }
+			.tag {
+				font-size: 12px; padding: 2px 9px; border-radius: 999px;
+				background: rgba(160, 90, 255, .18); color: #c9a6ff;
+				border: 1px solid rgba(160, 90, 255, .3);
+			}
+			.spacer { flex: 1; }
+			select, button {
+				font: inherit; font-size: 13px; padding: 6px 11px;
+				border-radius: 8px; cursor: pointer;
+				background: rgba(30, 16, 48, .85); color: #e8dcf5;
+				border: 1px solid rgba(160, 90, 255, .3);
+			}
+			select:hover, button:hover { border-color: rgba(190, 130, 255, .6); }
+			button.primary {
+				background: linear-gradient(135deg, #8b3fd4, #b06cf0);
+				border: none; color: #fff; font-weight: 600;
+			}
+			button.primary:disabled { opacity: .45; cursor: not-allowed; }
+
+			main { flex: 1; overflow-y: auto; padding: 22px 20px 10px; }
+			.wrap { max-width: 880px; margin: 0 auto; }
+
+			.msg { margin-bottom: 18px; }
+			.who { font-size: 12px; color: #a08bbd; margin-bottom: 5px; font-weight: 600; }
+			.bubble {
+				border-radius: 12px; padding: 13px 15px; white-space: pre-wrap;
+				word-break: break-word; font-size: 14.5px; line-height: 1.7;
+				border: 1px solid rgba(160, 90, 255, .18);
+				background: rgba(28, 15, 45, .72);
+			}
+			.msg.user .bubble {
+				background: rgba(90, 40, 140, .38);
+				border-color: rgba(190, 130, 255, .35);
+			}
+			.bubble pre {
+				background: #0d0716; border: 1px solid rgba(160, 90, 255, .2);
+				padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0;
+				font: 13px/1.5 "Cascadia Code", Consolas, monospace; color: #d8c8ee;
+			}
+			.bubble code {
+				font-family: "Cascadia Code", Consolas, monospace; font-size: 13px;
+				background: rgba(160, 90, 255, .14); padding: 1px 5px; border-radius: 4px;
+			}
+			.bubble pre code { background: none; padding: 0; }
+			.stage { font-size: 12px; color: #9b85b5; font-style: italic; margin-bottom: 6px; }
+
+			footer {
+				padding: 12px 20px 18px;
+				border-top: 1px solid rgba(190, 140, 255, .18);
+				backdrop-filter: blur(10px);
+				background: rgba(20, 10, 32, .55);
+			}
+			.inputwrap { max-width: 880px; margin: 0 auto; }
+			textarea {
+				width: 100%; min-height: 84px; max-height: 300px; resize: vertical;
+				border-radius: 12px; padding: 12px 14px;
+				background: rgba(18, 10, 30, .85); color: #efe6f7;
+				border: 1px solid rgba(160, 90, 255, .28);
+				font: 14px/1.6 "Cascadia Code", Consolas, "Microsoft YaHei UI", monospace;
+				outline: none;
+			}
+			textarea:focus { border-color: rgba(190, 130, 255, .65); box-shadow: 0 0 0 3px rgba(160, 90, 255, .12); }
+			.row { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
+			.hint { font-size: 12px; color: #9b85b5; }
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>AI 助手</h1>
+			<span class="tag" id="who">校验中…</span>
+			<div class="spacer"></div>
+			<select id="model">
+				<option value="deepseek-v4-pro">deepseek-v4-pro（强）</option>
+				<option value="deepseek-flash">deepseek-flash（快）</option>
+			</select>
+			<button id="clear">清空</button>
+		</header>
+
+		<main><div class="wrap" id="chat"></div></main>
+
+		<footer>
+			<div class="inputwrap">
+				<textarea id="input" placeholder="在这里提问，或粘贴代码…  Ctrl+Enter 发送"></textarea>
+				<div class="row">
+					<button class="primary" id="send">发送</button>
+					<span class="hint">Ctrl+Enter 发送</span>
+					<div class="spacer"></div>
+					<span class="hint" id="counter"></span>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			const $ = (id: string) => document.getElementById(id) as any;
+			let history = [];
+			let busy = false;
+
+			// 探测权限
+			(async () => {
+				try {
+					const r = await fetch("/api/ai/chat");
+					const d = await r.json();
+					if (!d.ok) {
+						$("who").textContent = "无权访问";
+						$("send").disabled = true;
+						return;
+					}
+					$("who").textContent = d.configured
+						? "已登录 · " + d.user
+						: "⚠ 未配置 API Key";
+					if (!d.configured) $("send").disabled = true;
+				} catch {
+					$("who").textContent = "连接失败";
+					$("send").disabled = true;
+				}
+			})();
+
+			function esc(s) {
+				return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			}
+			function render(el, text) {
+				let out = "";
+				const parts = text.split("```");
+				parts.forEach((p, i) => {
+					if (i % 2 === 1) {
+						const body = p.replace(/^\w*\n/, "");
+						out += `<pre><code>${esc(body)}</code></pre>`;
+					} else {
+						out += esc(p).replace(/`([^`\n]+)`/g, "<code>$1</code>");
+					}
+				});
+				el.innerHTML = out;
+			}
+
+			function addMsg(role, text) {
+				const d = document.createElement("div");
+				d.className = "msg " + (role === "user" ? "user" : "ai");
+				d.innerHTML = `<div class="who">${role === "user" ? "我" : "AI"}</div><div class="bubble"></div>`;
+				(d.querySelector(".bubble") as any).textContent = text;
+				$("chat").appendChild(d);
+				$("chat").parentElement.scrollTop = 1e9;
+				return d.querySelector(".bubble");
+			}
+
+			async function send() {
+				if (busy) return;
+				const text = $("input").value.trim();
+				if (!text) return;
+
+				busy = true;
+				$("send").disabled = true;
+				addMsg("user", text);
+				history.push({ role: "user", content: text });
+				$("input").value = "";
+				$("counter").textContent = "";
+
+				const box = document.createElement("div");
+				box.className = "msg ai";
+				box.innerHTML = '<div class="who">AI</div><div class="stage"></div><div class="bubble"></div>';
+				$("chat").appendChild(box);
+				const stageEl = box.querySelector(".stage")!;
+				const bubble = box.querySelector(".bubble")!;
+				let acc = "";
+
+				try {
+					const resp = await fetch("/api/ai/chat", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							model: $("model").value,
+							messages: history.slice(-12),
+							max_tokens: 4096,
+						}),
+					});
+
+					if (!resp.ok) {
+						const err = await resp.json().catch(() => ({}));
+						bubble.textContent = "出错了：" + (err.error || resp.status);
+						return;
+					}
+
+					const reader = resp.body!.getReader();
+					const dec = new TextDecoder("utf-8");
+					let buf = "";
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						buf += dec.decode(value, { stream: true });
+						let nl;
+						while ((nl = buf.indexOf("\n")) !== -1) {
+							const line = buf.slice(0, nl).trim();
+							buf = buf.slice(nl + 1);
+							if (!line.startsWith("data:")) continue;
+							const data = line.slice(5).trim();
+							if (data === "[DONE]") continue;
+							let obj;
+							try {
+								obj = JSON.parse(data);
+							} catch {
+								continue;
+							}
+							const delta = obj.choices?.[0]?.delta || {};
+							if (delta.content) {
+								acc += delta.content;
+								render(bubble, acc);
+								$("chat").parentElement.scrollTop = 1e9;
+							}
+						}
+					}
+					history.push({ role: "assistant", content: acc });
+				} catch (e: any) {
+					bubble.textContent = "出错了：" + e.message;
+				} finally {
+					busy = false;
+					stageEl.textContent = "";
+					$("send").disabled = false;
+				}
+			}
+
+			$("send").onclick = send;
+			$("clear").onclick = () => {
+				history = [];
+				$("chat").innerHTML = "";
+			};
+			$("input").addEventListener("keydown", (e: KeyboardEvent) => {
+				if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+					e.preventDefault();
+					send();
+				}
+			});
+			$("input").addEventListener("input", () => {
+				const n = $("input").value.length;
+				$("counter").textContent = n ? n + " 字" : "";
+			});
+		</script>
+	</body>
+</html>
